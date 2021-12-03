@@ -1,7 +1,7 @@
 ## Interface: 20502
 ## Title: TBC Auto Combat Log
 ## Author: Firedemon
-## DefaultState: enabled
-## SavedVariables: kara,gruul,mag,ssc,tk,bt,hyjal,za,swp,astatus,stoplogging, hrh, bfh, shhh, sph, ubh, svh, mth, ach, shh, slh, arch, mechh, both, mgth, ohfh, bmh, dungeonstatus, raidstatus
-## Version: 1.0
+## Notes: Auto start or stop combatlogging for raids and dungeons with options.
+## SavedVariablesPerCharacter: TBCCombatLoggingDB
+## Version: 1.1
 Core.lua
