@@ -254,7 +254,7 @@ function TBCCL:GetOptionsFrame()
   self.infoFrame:SetScript("OnDragStop", self.infoFrame.StopMovingOrSizing)
 
   self.infoFrame:SetSize(450, 415)
-  self.infoFrame:SetPoint("CENTER", UIParent, "CENTER")
+  self.infoFrame:SetPoint("TOPLEFT", self.optionsFrame, "TOPRIGHT", 5,0)
 
   self.infoFrame.title = self.infoFrame:CreateFontString(nil, "OVERLAY")
   self.infoFrame.title:SetFontObject("GameFontHighlight")
@@ -389,7 +389,7 @@ function TBCCL:GetOptionsFrame()
   self.tbcraidsFrame:SetFrameStrata("HIGH")
 
   self.tbcraidsFrame:SetSize(220, 270)
-  self.tbcraidsFrame:SetPoint("CENTER", UIParent, "CENTER")
+  self.tbcraidsFrame:SetPoint("TOPLEFT", self.optionsFrame, "BOTTOMLEFT", 0, -5)
 
   self.tbcraidsFrame.title = self.tbcraidsFrame:CreateFontString(nil, "OVERLAY")
   self.tbcraidsFrame.title:SetFontObject("GameFontHighlight")
@@ -438,7 +438,7 @@ function TBCCL:GetOptionsFrame()
   self.tbcheroicsFrame:SetFrameStrata("HIGH")
 
   self.tbcheroicsFrame:SetSize(240, 440)
-  self.tbcheroicsFrame:SetPoint("CENTER", UIParent, "CENTER")
+  self.tbcheroicsFrame:SetPoint("TOPRIGHT", self.optionsFrame, "TOPLEFT", -5, 0)
 
   self.tbcheroicsFrame.title = self.tbcheroicsFrame:CreateFontString(nil, "OVERLAY")
   self.tbcheroicsFrame.title:SetFontObject("GameFontHighlight")

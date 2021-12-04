@@ -3,5 +3,5 @@
 ## Author: Firedemon
 ## Notes: Auto start or stop combatlogging for raids and dungeons with options.
 ## SavedVariablesPerCharacter: TBCCombatLoggingDB
-## Version: 1.1
+## Version: 1.1.1
 Core.lua
