@@ -7,7 +7,46 @@ end
 local eventregistry = CreateFrame("Frame")
 eventregistry:SetScript("OnEvent",TBCCL.OnEvent)
 eventregistry:RegisterEvent("ADDON_LOADED")
-
+local After = C_Timer.After
+-- localization support
+local L = setmetatable({}, {__index = function(t, k)
+  local v = tostring(k)
+  rawset(t,k,v)
+  return v
+end})
+local gameLocale = GetLocale()
+if gameLocale == "deDE" then
+  L["Doom Lord Kazzak"] = "Verdammnislord Kazzak"
+  L["Doomwalker"] = "Verdammniswandler"
+end
+if gameLocale == "esES" or gameLocale == "esMX" then
+  L["Doom Lord Kazzak"] = "Señor Apocalíptico Kazzak"
+  L["Doomwalker"] = "Caminante del Destino"
+end
+if gameLocale == "frFR" then
+  L["Doom Lord Kazzak"] = "Seigneur funeste Kazzak"
+  L["Doomwalker"] = "Marche-funeste"
+end
+if gameLocale == "itIT" then -- seems to be same as enUS
+  L["Doom Lord Kazzak"] = "Doom Lord Kazzak"
+  L["Doomwalker"] = "Doomwalker"
+end
+if gameLocale == "ptBR" then
+  L["Doom Lord Kazzak"] = "Senhor da Perdição Kazzak"
+  L["Doomwalker"] = "Armagedom"
+end
+if gameLocale == "ruRU" then
+  L["Doom Lord Kazzak"] = "Владыка судеб Каззак"
+  L["Doomwalker"] = "Судьболом"
+end
+if gameLocale == "zhCN" then
+  L["Doom Lord Kazzak"] = "末日领主卡扎克"
+  L["Doomwalker"] = "末日行者"
+end
+if gameLocale == "koKR" then
+  L["Doom Lord Kazzak"] = "파멸의 군주 카자크"
+  L["Doomwalker"] = "파멸의 절단기"
+end
 local infoLines = {
   "- This addon will allow for combat logging to start automatically without",
   "having to remember to do it manually every time.",
@@ -45,10 +84,13 @@ local raids = {
   {key = "bt",    mapid = 564, desc = (GetRealZoneText(564))},
   {key = "za",    mapid = 568, desc = (GetRealZoneText(568))},
   {key = "swp",   mapid = 580, desc = (GetRealZoneText(580))},
+  {key = "dlk",   mapid = 3547,desc = L["Doom Lord Kazzak"]},
+  {key = "dw",    mapid = 3520,desc = L["Doomwalker"]},
 }
 local mapidtoraid = {
   [532] = "kara", [544] = "mag", [565] = "gruul", [548] = "ssc",
-  [550] = "tk", [534] = "hyjal", [564] = "bt", [568] = "za", [580] = "swp"}
+  [550] = "tk", [534] = "hyjal", [564] = "bt", [568] = "za", [580] = "swp",
+  [3547] = "dlk", [3520] = "dw"}
 local dungeons = {
   {key = "hrh",   mapid = 543, desc = (GetRealZoneText(543))},
   {key = "bfh",   mapid = 542, desc = (GetRealZoneText(542))},
@@ -85,6 +127,8 @@ TBCCombatLoggingDB = TBCCombatLoggingDB or {
   bt = true,
   za = true,
   swp = true,
+  dlk = true,
+  dw = true,
   hrh = true,
   bfh = true,
   shhh = true,
@@ -125,10 +169,54 @@ function TBCCL:shouldWatchEvents(context)
     self:PLAYER_ENTERING_WORLD()
   end
 end
+local targetEvents = {"PLAYER_TARGET_CHANGED", "UNIT_TARGET", "UPDATE_MOUSEOVER_UNIT"}
+local zone_smv, subzone_kiljaeden = (C_Map.GetAreaInfo(3520)), (C_Map.GetAreaInfo(3547))
+function TBCCL:shouldWatchTarget(zone, subzone)
+  if (TBCCombatLoggingDB.dw and zone == zone_smv) or (TBCCombatLoggingDB.dlk and subzone == subzone_kiljaeden) then
+    for _, event in pairs(targetEvents) do
+      eventregistry:RegisterEvent(event)
+    end
+  else
+    for _, event in pairs(targetEvents) do
+      eventregistry:UnregisterEvent(event)
+    end
+  end
+end
 
-function TBCCL:shouldLog(instanceType, instanceID, difficultyID )
+local npctooption = {
+  [17111] = "dw", -- Doomwalker
+  [18728] = "dlk", -- Doom Lord Kazzak
+}
+local optiontonpc = {
+  dw = 17111,
+  dlk = 18728,
+}
+function TBCCL:worldbossLog(unit)
+  if UnitClassification(unit) == "worldboss" then
+    if UnitIsEnemy(unit) and (not UnitIsDead(unit)) then
+      local guid = UnitGUID(unit)
+      local unit_type,_,_,_,_, npcid = strsplit("-",guid)
+      if unit_type == "Creature" then
+        local optionKey = npctooption[npcid]
+        local should
+        if optionKey then
+          should = (TBCCombatLoggingDB.raidstatus == "Enable" and IsInRaid()) and TBCCombatLoggingDB[optionKey]
+          if should and not TBCCL._isLogging then
+            TBCCL._isLogging = LoggingCombat(true)
+            TBCCL:echo("Combat Logging has been started!", 255/255, 255/255, 0)
+            TBCCL._wbLogging = TBCCL._isLogging
+          end
+        end
+      end
+    end
+  end
+end
+
+function TBCCL:shouldLog(instanceType, instanceID, difficultyID)
   if instanceType == "party" then
-    if not difficultyID or difficultyID == 0 then return end
+    if not difficultyID or (difficultyID == 0) then
+      return After(2,function() TBCCL:PLAYER_ENTERING_WORLD() end)
+    end
     local isHeroic = difficultyID and (difficultyID == 2 or difficultyID == 174)
     local optionKey = mapidtodungeon[instanceID]
     local should
@@ -141,9 +229,12 @@ function TBCCL:shouldLog(instanceType, instanceID, difficultyID )
     elseif TBCCL._isLogging and not should then
       TBCCL._isLogging = LoggingCombat(false)
       TBCCL:echo("Combat Logging has been stopped!", 255/255, 255/255, 0)
+      TBCCL._wbLogging = TBCCL._isLogging
     end
   elseif instanceType == "raid" then
-    if not difficultyID or difficultyID == 0 then return end
+    if not difficultyID or (difficultyID == 0) then
+      return After(2,function() TBCCL:PLAYER_ENTERING_WORLD() end)
+    end
     local optionKey = mapidtoraid[instanceID]
     local should
     if optionKey then
@@ -155,11 +246,13 @@ function TBCCL:shouldLog(instanceType, instanceID, difficultyID )
     elseif TBCCL._isLogging and not should then
       TBCCL._isLogging = LoggingCombat(false)
       TBCCL:echo("Combat Logging has been stopped!", 255/255, 255/255, 0)
+      TBCCL._wbLogging = TBCCL._isLogging
     end
   else
-    if TBCCombatLoggingDB.stoplogging == true and TBCCL._isLogging then
+    if TBCCombatLoggingDB.stoplogging == true and TBCCL._isLogging and (not TBCCL._wbLogging) then
       TBCCL._isLogging = LoggingCombat(false)
       TBCCL:echo("Combat Logging has been stopped!", 255/255, 255/255, 0)
+      TBCCL._wbLogging = TBCCL._isLogging
     end
   end
   self:RefreshOptionsFrame()
@@ -179,10 +272,28 @@ function TBCCL:ADDON_LOADED(...)
 end
 function TBCCL:PLAYER_ENTERING_WORLD(...)
   local instanceName, instanceType, difficultyID, _, _, _, _, instanceID = GetInstanceInfo()
+  local zone, subzone = GetRealZoneText(), GetSubZoneText()
+  self:shouldWatchTarget(zone, subzone)
   self:shouldLog(instanceType, instanceID, difficultyID)
 end
 TBCCL.ZONE_CHANGED_NEW_AREA = TBCCL.PLAYER_ENTERING_WORLD
 TBCCL.RAID_INSTANCE_WELCOME = TBCCL.PLAYER_ENTERING_WORLD
+
+function TBCCL:PLAYER_TARGET_CHANGED()
+  if UnitExists("target") then
+    self:worldbossLog("target")
+  end
+  if UnitExists("mouseover") then
+    self:worldbossLog("mouseover")
+  end
+end
+function TBCCL:UNIT_TARGET(unit)
+  local target = unit.."target"
+  if UnitExists(target) then
+    self:worldbossLog(target)
+  end
+end
+TBCCL.UPDATE_MOUSEOVER_UNIT = TBCCL.PLAYER_TARGET_CHANGED
 
 function TBCCL:RefreshOptionsFrame()
   if not self.optionsFrame then return end
@@ -352,6 +463,7 @@ function TBCCL:GetOptionsFrame()
     if (LoggingCombat()) then
       TBCCL._isLogging = LoggingCombat(false)
       TBCCL:echo("Combat Logging has been stopped!", 255/255, 255/255, 0)
+      TBCCL._wbLogging = TBCCL._isLogging
     else
       TBCCL:echo("Combat was not being logged!", 255/255, 255/255, 0)
     end
@@ -388,7 +500,7 @@ function TBCCL:GetOptionsFrame()
 
   self.tbcraidsFrame:SetFrameStrata("HIGH")
 
-  self.tbcraidsFrame:SetSize(220, 270)
+  self.tbcraidsFrame:SetSize(220, 314)
   self.tbcraidsFrame:SetPoint("TOPLEFT", self.optionsFrame, "BOTTOMLEFT", 0, -5)
 
   self.tbcraidsFrame.title = self.tbcraidsFrame:CreateFontString(nil, "OVERLAY")
