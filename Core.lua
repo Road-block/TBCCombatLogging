@@ -193,7 +193,7 @@ local optiontonpc = {
 }
 function TBCCL:worldbossLog(unit)
   if UnitClassification(unit) == "worldboss" then
-    if UnitIsEnemy(unit) and (not UnitIsDead(unit)) then
+    if UnitIsEnemy(unit,"player") and (not UnitIsDead(unit)) then
       local guid = UnitGUID(unit)
       local unit_type,_,_,_,_, npcid = strsplit("-",guid)
       if unit_type == "Creature" then
